@@ -22,15 +22,6 @@ class GradientTextEmbedder:
     ) -> None:
         self._host = host
 
-        if access_token is None:
-            try:
-                access_token = os.environ["GRADIENT_ACCESS_TOKEN"]
-            except KeyError as e:
-                raise ValueError(
-                    "GradientTextEmbedder expects an access token. "
-                    "Set the GRADIENT_ACCESS_TOKEN environment variable or pass it explicitly."
-                ) from e
-
         self._gradient = Gradient(access_token=access_token, host=host, workspace_id=workspace_id)
 
     @component.output_types(embedding=List[float])
