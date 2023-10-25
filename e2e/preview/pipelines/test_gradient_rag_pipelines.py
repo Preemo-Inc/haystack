@@ -3,11 +3,11 @@ import json
 import pytest
 
 from haystack.preview import Pipeline, Document
+from haystack.preview.components.embedders.gradient_document_embedder import GradientDocumentEmbedder
 from haystack.preview.components.embedders.gradient_text_embedder import GradientTextEmbedder
 from haystack.preview.document_stores import InMemoryDocumentStore
 from haystack.preview.components.writers import DocumentWriter
 from haystack.preview.components.retrievers import InMemoryEmbeddingRetriever
-from haystack.preview.components.embedders import SentenceTransformersTextEmbedder, SentenceTransformersDocumentEmbedder
 from haystack.preview.components.generators.openai.gpt import GPTGenerator
 from haystack.preview.components.builders.answer_builder import AnswerBuilder
 from haystack.preview.components.builders.prompt_builder import PromptBuilder
@@ -16,6 +16,10 @@ from haystack.preview.components.builders.prompt_builder import PromptBuilder
 @pytest.mark.skipif(
     not os.environ.get("GRADIENT_ACCESS_TOKEN", None),
     reason="Export an env var called GRADIENT_ACCESS_TOKEN containing the Gradient access token to run this test.",
+)
+@pytest.mark.skipif(
+    not os.environ.get("OPENAI_API_KEY", None),
+    reason="Export an env var called OPENAI_API_KEY containing the OpenAI API key to run this test.",
 )
 def test_gradient_embedding_retrieval_rag_pipeline(tmp_path):
     # Create the RAG pipeline
@@ -63,10 +67,7 @@ def test_gradient_embedding_retrieval_rag_pipeline(tmp_path):
     ]
     document_store = rag_pipeline.get_component("retriever").document_store
     indexing_pipeline = Pipeline()
-    indexing_pipeline.add_component(
-        instance=SentenceTransformersDocumentEmbedder(model_name_or_path="sentence-transformers/all-MiniLM-L6-v2"),
-        name="document_embedder",
-    )
+    indexing_pipeline.add_component(instance=GradientDocumentEmbedder(), name="document_embedder")
     indexing_pipeline.add_component(instance=DocumentWriter(document_store=document_store), name="document_writer")
     indexing_pipeline.connect("document_embedder", "document_writer")
     indexing_pipeline.run({"document_embedder": {"documents": documents}})
