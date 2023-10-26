@@ -8,7 +8,7 @@ from haystack.preview.components.embedders.gradient_text_embedder import Gradien
 from haystack.preview.document_stores import InMemoryDocumentStore
 from haystack.preview.components.writers import DocumentWriter
 from haystack.preview.components.retrievers import InMemoryEmbeddingRetriever
-from haystack.preview.components.generators.openai.gpt import GPTGenerator
+from haystack.preview.components.generators.gradient.base import GradientGenerator
 from haystack.preview.components.builders.answer_builder import AnswerBuilder
 from haystack.preview.components.builders.prompt_builder import PromptBuilder
 
@@ -16,10 +16,6 @@ from haystack.preview.components.builders.prompt_builder import PromptBuilder
 @pytest.mark.skipif(
     not os.environ.get("GRADIENT_ACCESS_TOKEN", None),
     reason="Export an env var called GRADIENT_ACCESS_TOKEN containing the Gradient access token to run this test.",
-)
-@pytest.mark.skipif(
-    not os.environ.get("OPENAI_API_KEY", None),
-    reason="Export an env var called OPENAI_API_KEY containing the OpenAI API key to run this test.",
 )
 def test_gradient_embedding_retrieval_rag_pipeline(tmp_path):
     # Create the RAG pipeline
@@ -32,20 +28,23 @@ def test_gradient_embedding_retrieval_rag_pipeline(tmp_path):
     \nQuestion: {{question}}
     \nAnswer:
     """
+
+    gradient_access_token = os.environ.get("GRADIENT_ACCESS_TOKEN")
     rag_pipeline = Pipeline()
-    embedder = GradientTextEmbedder(access_token=os.environ.get("GRADIENT_ACCESS_TOKEN"))
+    embedder = GradientTextEmbedder(access_token=gradient_access_token)
     rag_pipeline.add_component(instance=embedder, name="text_embedder")
     rag_pipeline.add_component(
         instance=InMemoryEmbeddingRetriever(document_store=InMemoryDocumentStore()), name="retriever"
     )
     rag_pipeline.add_component(instance=PromptBuilder(template=prompt_template), name="prompt_builder")
-    rag_pipeline.add_component(instance=GPTGenerator(api_key=os.environ.get("OPENAI_API_KEY")), name="llm")
+    rag_pipeline.add_component(
+        instance=GradientGenerator(access_token=gradient_access_token, base_model_slug="llama2-7b-chat"), name="llm"
+    )
     rag_pipeline.add_component(instance=AnswerBuilder(), name="answer_builder")
     rag_pipeline.connect("text_embedder", "retriever")
     rag_pipeline.connect("retriever", "prompt_builder.documents")
     rag_pipeline.connect("prompt_builder", "llm")
     rag_pipeline.connect("llm.replies", "answer_builder.replies")
-    rag_pipeline.connect("llm.metadata", "answer_builder.metadata")
     rag_pipeline.connect("retriever", "answer_builder.documents")
 
     # Draw the pipeline
