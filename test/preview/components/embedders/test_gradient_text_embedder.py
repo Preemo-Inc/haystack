@@ -1,11 +1,12 @@
 import pytest
 from haystack.preview.components.embedders.gradient_text_embedder import GradientTextEmbedder
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, NonCallableMagicMock
 import numpy as np
 
 
 access_token = "access_token"
 workspace_id = "workspace_id"
+model = "bge-large"
 
 
 def has_gradient():
@@ -84,15 +85,25 @@ class TestGradientTextEmbedder:
         embedder.warm_up()
         embedder._gradient.get_embeddings_model.assert_called_once_with("bge-large")
 
-    # @pytest.mark.unit
-    # def test_run(self):
-    #     model = "bge-large"
-    #     embedder = GradientTextEmbedder(access_token=access_token, workspace_id=workspace_id)
-    #     embedder._gradient.create_embedding = MagicMock(return_value=np.zeros(1024))
-    #     embedder._gradient.create_embedding.assert_called_once_with(model=model)
+    @pytest.mark.unit
+    def test_run_fail_if_not_warmed_up(self):
+        embedder = GradientTextEmbedder(access_token=access_token, workspace_id=workspace_id)
 
-    #     result = embedder.run(text="The food was delicious")
+        with pytest.raises(RuntimeError, match="warm_up()"):
+            embedder.run(text="The food was delicious")
 
-    #     assert len(result["embedding"]) == 1024  # 1024 is the bge-large embedding size
-    #     assert all(isinstance(x, float) for x in result["embedding"])
-    #     assert result["metadata"] == {"model": model, "usage": {"prompt_tokens": 4, "total_tokens": 4}}
+    @pytest.mark.unit
+    def test_run(self):
+        embedder = GradientTextEmbedder(access_token=access_token, workspace_id=workspace_id)
+        embedder._embedding_model = NonCallableMagicMock()
+        embedder._embedding_model.generate_embeddings.return_value = {
+            "embeddings": [{"embedding": np.random.rand(1024).tolist(), "index": 0}]
+        }
+
+        result = embedder.run(text="The food was delicious")
+        embedder._embedding_model.generate_embeddings.assert_called_once_with(
+            inputs=[{"input": "The food was delicious"}]
+        )
+
+        assert len(result["embedding"]) == 1024  # 1024 is the bge-large embedding size
+        assert all(isinstance(x, float) for x in result["embedding"])

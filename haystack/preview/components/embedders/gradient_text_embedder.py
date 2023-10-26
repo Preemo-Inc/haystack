@@ -49,5 +49,15 @@ class GradientTextEmbedder:
             self._embedding_model = self._gradient.get_embeddings_model(self._model_name)
 
     @component.output_types(embedding=List[float])
-    def run(self, text: str) -> List[float]:
-        return {"embedding": [0.0, 0.0, 0.0]}
+    def run(self, text: str):
+        if not isinstance(text, str):
+            raise TypeError(
+                "GradientTextEmbedder expects a string as an input."
+                "In case you want to embed a list of Documents, please use the GradientDocumentEmbedder."
+            )
+
+        if not hasattr(self, "_embedding_model"):
+            raise RuntimeError("The embedding model has not been loaded. Please call warm_up() before running.")
+
+        result = self._embedding_model.generate_embeddings(inputs=[{"input": text}])
+        return {"embedding": result["embeddings"][0]["embedding"]}
