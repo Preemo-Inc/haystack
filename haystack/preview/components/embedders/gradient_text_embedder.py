@@ -46,7 +46,7 @@ class GradientTextEmbedder:
         Load the embedding backend.
         """
         if not hasattr(self, "_embedding_model"):
-            self._embedding_model = self._gradient.get_embeddings_model(self._model_name)
+            self._embedding_model = self._gradient.get_embeddings_model(slug=self._model_name)
 
     @component.output_types(embedding=List[float])
     def run(self, text: str):
@@ -60,4 +60,4 @@ class GradientTextEmbedder:
             raise RuntimeError("The embedding model has not been loaded. Please call warm_up() before running.")
 
         result = self._embedding_model.generate_embeddings(inputs=[{"input": text}])
-        return {"embedding": result["embeddings"][0]["embedding"]}
+        return {"embedding": result.embeddings[0].embedding}

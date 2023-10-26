@@ -75,7 +75,7 @@ class TestGradientTextEmbedder:
         embedder = GradientTextEmbedder(access_token=access_token, workspace_id=workspace_id)
         embedder._gradient.get_embeddings_model = MagicMock()
         embedder.warm_up()
-        embedder._gradient.get_embeddings_model.assert_called_once_with("bge-large")
+        embedder._gradient.get_embeddings_model.assert_called_once_with(slug="bge-large")
 
     @pytest.mark.unit
     def test_warmup_doesnt_reload(self):
@@ -83,7 +83,7 @@ class TestGradientTextEmbedder:
         embedder._gradient.get_embeddings_model = MagicMock(default_return_value="fake model")
         embedder.warm_up()
         embedder.warm_up()
-        embedder._gradient.get_embeddings_model.assert_called_once_with("bge-large")
+        embedder._gradient.get_embeddings_model.assert_called_once_with(slug="bge-large")
 
     @pytest.mark.unit
     def test_run_fail_if_not_warmed_up(self):
@@ -94,11 +94,13 @@ class TestGradientTextEmbedder:
 
     @pytest.mark.unit
     def test_run(self):
+        from gradientai.openapi.client.models.generate_embedding_success import GenerateEmbeddingSuccess
+
         embedder = GradientTextEmbedder(access_token=access_token, workspace_id=workspace_id)
         embedder._embedding_model = NonCallableMagicMock()
-        embedder._embedding_model.generate_embeddings.return_value = {
-            "embeddings": [{"embedding": np.random.rand(1024).tolist(), "index": 0}]
-        }
+        embedder._embedding_model.generate_embeddings.return_value = GenerateEmbeddingSuccess(
+            embeddings=[{"embedding": np.random.rand(1024).tolist(), "index": 0}]
+        )
 
         result = embedder.run(text="The food was delicious")
         embedder._embedding_model.generate_embeddings.assert_called_once_with(
