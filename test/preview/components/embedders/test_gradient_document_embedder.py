@@ -114,3 +114,26 @@ class TestGradientDocumentEmbedder:
             assert isinstance(doc, Document)
             assert isinstance(doc.embedding, list)
             assert isinstance(doc.embedding[0], float)
+
+    @pytest.mark.unit
+    def test_run_batch(self):
+        from gradientai.openapi.client.models.generate_embedding_success import GenerateEmbeddingSuccess
+
+        embedder = GradientDocumentEmbedder(access_token=access_token, workspace_id=workspace_id)
+        embedder._embedding_model = NonCallableMagicMock()
+
+        embedder._embedding_model.generate_embeddings.return_value = GenerateEmbeddingSuccess(
+            embeddings=[{"embedding": np.random.rand(1024).tolist(), "index": i} for i in range(110)]
+        )
+
+        documents = [Document(text=f"document number {i}") for i in range(110)]
+
+        result = embedder.run(documents=documents)
+
+        assert embedder._embedding_model.generate_embeddings.call_count == 2
+        assert isinstance(result["documents"], list)
+        assert len(result["documents"]) == len(documents)
+        for doc in result["documents"]:
+            assert isinstance(doc, Document)
+            assert isinstance(doc.embedding, list)
+            assert isinstance(doc.embedding[0], float)

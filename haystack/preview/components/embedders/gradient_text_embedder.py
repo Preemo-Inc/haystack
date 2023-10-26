@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Dict, List, Optional
 
 from haystack.preview import component, default_to_dict
@@ -6,8 +5,6 @@ from haystack.preview.lazy_imports import LazyImport
 
 with LazyImport(message="Run 'pip install gradientai'") as gradientai_import:
     from gradientai import Gradient
-
-logger = logging.getLogger(__name__)
 
 
 @component
@@ -24,6 +21,16 @@ class GradientTextEmbedder:
         workspace_id: Optional[str] = None,
         host: Optional[str] = None,
     ) -> None:
+        """
+        Create a GradientTextEmbedder component.
+
+        :param model_name: The name of the model to use.
+        :param access_token: The Gradient access token. If not provided it's read from the environment
+                             variable GRADIENT_ACCESS_TOKEN.
+        :param workspace_id: The Gradient workspace ID. If not provided it's read from the environment
+                             variable GRADIENT_WORKSPACE_ID.
+        :param host: The Gradient host. By default it uses https://api.gradient.ai/.
+        """
         self._host = host
         self._model_name = model_name
 
@@ -43,13 +50,14 @@ class GradientTextEmbedder:
 
     def warm_up(self) -> None:
         """
-        Load the embedding backend.
+        Load the embedding model.
         """
         if not hasattr(self, "_embedding_model"):
             self._embedding_model = self._gradient.get_embeddings_model(slug=self._model_name)
 
     @component.output_types(embedding=List[float])
     def run(self, text: str):
+        """Generates an embedding for a single text."""
         if not isinstance(text, str):
             raise TypeError(
                 "GradientTextEmbedder expects a string as an input."

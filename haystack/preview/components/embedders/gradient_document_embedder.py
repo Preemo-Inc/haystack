@@ -25,6 +25,16 @@ class GradientDocumentEmbedder:
         workspace_id: Optional[str] = None,
         host: Optional[str] = None,
     ) -> None:
+        """
+        Create a GradientDocumentEmbedder component.
+
+        :param model_name: The name of the model to use.
+        :param access_token: The Gradient access token. If not provided it's read from the environment
+                             variable GRADIENT_ACCESS_TOKEN.
+        :param workspace_id: The Gradient workspace ID. If not provided it's read from the environment
+                             variable GRADIENT_WORKSPACE_ID.
+        :param host: The Gradient host. By default it uses https://api.gradient.ai/.
+        """
         self._host = host
         self._model_name = model_name
 
@@ -36,21 +46,40 @@ class GradientDocumentEmbedder:
         """
         return {"model": self._model_name}
 
-    def warm_up(self) -> None:
-        """
-        Load the embedding backend.
-        """
-        if not hasattr(self, "_embedding_model"):
-            self._embedding_model = self._gradient.get_embeddings_model(slug=self._model_name)
-
     def to_dict(self) -> dict:
         """
         Serialize the component to a Python dictionary.
         """
         return default_to_dict(self, workspace_id=self._gradient.workspace_id, model_name=self._model_name)
 
+    def warm_up(self) -> None:
+        """
+        Load the embedding model.
+        """
+        if not hasattr(self, "_embedding_model"):
+            self._embedding_model = self._gradient.get_embeddings_model(slug=self._model_name)
+
+    def _generate_embeddings(self, documents: List[Document], batch_size=100) -> List[List[float]]:
+        """
+        Batches the documents and generates the embeddings.
+        """
+        batches = [documents[i : i + batch_size] for i in range(0, len(documents), batch_size)]
+
+        embeddings = []
+        for batch in batches:
+            response = self._embedding_model.generate_embeddings(inputs=[{"input": doc.text} for doc in batch])
+            embeddings.extend([e.embedding for e in response.embeddings])
+
+        return embeddings
+
     @component.output_types(documents=List[Document])
     def run(self, documents: List[Document]):
+        """
+        Embed a list of Documents.
+        The embedding of each Document is stored in the `embedding` field of the Document.
+
+        :param documents: A list of Documents to embed.
+        """
         if not isinstance(documents, list) or documents and not isinstance(documents[0], Document):
             raise TypeError(
                 "GradientDocumentEmbedder expects a list of Documents as input."
@@ -60,8 +89,8 @@ class GradientDocumentEmbedder:
         if not hasattr(self, "_embedding_model"):
             raise RuntimeError("The embedding model has not been loaded. Please call warm_up() before running.")
 
-        result = self._embedding_model.generate_embeddings(inputs=[{"input": doc.text} for doc in documents])
-        for doc, embedding in zip(documents, result.embeddings):
-            doc.embedding = embedding.embedding
+        embeddings = self._generate_embeddings(documents=documents)
+        for doc, embedding in zip(documents, embeddings):
+            doc.embedding = embedding
 
         return {"documents": documents}
