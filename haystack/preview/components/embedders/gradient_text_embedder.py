@@ -41,6 +41,13 @@ class GradientTextEmbedder:
         """
         return default_to_dict(self, workspace_id=self._gradient.workspace_id, model_name=self._model_name)
 
+    def warm_up(self) -> None:
+        """
+        Load the embedding backend.
+        """
+        if not hasattr(self, "_embedding_model"):
+            self._embedding_model = self._gradient.get_embeddings_model(self._model_name)
+
     @component.output_types(embedding=List[float])
-    def run(self, text: str):
+    def run(self, text: str) -> List[float]:
         return {"embedding": [0.0, 0.0, 0.0]}
