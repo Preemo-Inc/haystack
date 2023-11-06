@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional
 
 from haystack.preview import component, default_to_dict
@@ -5,6 +6,8 @@ from haystack.preview.lazy_imports import LazyImport
 
 with LazyImport(message="Run 'pip install gradientai'") as gradientai_import:
     from gradientai import Gradient
+
+logger = logging.getLogger(__name__)
 
 
 @component
@@ -77,4 +80,5 @@ class GradientTextEmbedder:
             raise RuntimeError("The embedding model has not been loaded. Please call warm_up() before running.")
 
         result = self._embedding_model.generate_embeddings(inputs=[{"input": text}])
+
         return {"embedding": result.embeddings[0].embedding}
