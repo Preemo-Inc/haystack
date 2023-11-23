@@ -59,7 +59,7 @@ class TestGradientDocumentEmbedder:
         component = GradientDocumentEmbedder(access_token=access_token, workspace_id=workspace_id)
         data = component.to_dict()
         assert data == {
-            "type": "GradientDocumentEmbedder",
+            "type": "haystack.preview.components.embedders.gradient_document_embedder.GradientDocumentEmbedder",
             "init_parameters": {"workspace_id": workspace_id, "model_name": "bge-large"},
         }
 
